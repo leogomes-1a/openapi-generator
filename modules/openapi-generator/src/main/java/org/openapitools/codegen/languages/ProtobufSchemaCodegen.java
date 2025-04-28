@@ -16,14 +16,36 @@
 
 package org.openapitools.codegen.languages;
 
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.media.ArraySchema;
-import io.swagger.v3.oas.models.media.MapSchema;
-import io.swagger.v3.oas.models.media.ObjectSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import lombok.Setter;
+import static org.openapitools.codegen.utils.StringUtils.camelize;
+import static org.openapitools.codegen.utils.StringUtils.underscore;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
-import org.openapitools.codegen.*;
+import org.openapitools.codegen.CodegenConfig;
+import org.openapitools.codegen.CodegenConstants;
+import org.openapitools.codegen.CodegenModel;
+import org.openapitools.codegen.CodegenOperation;
+import org.openapitools.codegen.CodegenParameter;
+import org.openapitools.codegen.CodegenProperty;
+import org.openapitools.codegen.CodegenResponse;
+import org.openapitools.codegen.CodegenType;
+import org.openapitools.codegen.DefaultCodegen;
+import org.openapitools.codegen.GeneratorLanguage;
+import org.openapitools.codegen.SupportingFile;
 import org.openapitools.codegen.exceptions.ProtoBufIndexComputationException;
 import org.openapitools.codegen.meta.GeneratorMetadata;
 import org.openapitools.codegen.meta.Stability;
@@ -38,15 +60,14 @@ import org.openapitools.codegen.utils.ModelUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import com.google.common.base.CaseFormat;
 
-import static org.openapitools.codegen.utils.StringUtils.*;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.MapSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
+import lombok.Setter;
 
 public class ProtobufSchemaCodegen extends DefaultCodegen implements CodegenConfig {
 
@@ -272,7 +293,7 @@ public class ProtobufSchemaCodegen extends DefaultCodegen implements CodegenConf
         if (additionalProperties.containsKey(CUSTOM_OPTIONS_MODEL)) {
             this.setCustomOptionsModel((String) additionalProperties.get(CUSTOM_OPTIONS_MODEL));
         }
-          
+
         if (additionalProperties.containsKey(this.SUPPORT_MULTIPLE_RESPONSES)) {
             this.supportMultipleResponses = convertPropertyToBooleanAndWriteBack(SUPPORT_MULTIPLE_RESPONSES);
         } else {
@@ -545,22 +566,32 @@ public class ProtobufSchemaCodegen extends DefaultCodegen implements CodegenConf
      *
      * @param allowableValues allowable values
      */
+    @SuppressWarnings("unchecked")
     public void addUnspecifiedToAllowableValues(Map<String, Object> allowableValues) {
+        final String UNSPECIFIED = "UNSPECIFIED";
+
         if (startEnumsWithUnspecified) {
             if (allowableValues.containsKey("enumVars")) {
                 List<Map<String, Object>> enumVars = (List<Map<String, Object>>) allowableValues.get("enumVars");
 
-                HashMap<String, Object> unspecified = new HashMap<String, Object>();
-                unspecified.put("name", "UNSPECIFIED");
-                unspecified.put("isString", "false");
-                unspecified.put("value", "\"UNSPECIFIED\"");
-                enumVars.add(0, unspecified);
+                boolean unspecifiedPresent = enumVars.stream()
+                .anyMatch(e -> {
+
+                    return UNSPECIFIED.equals(e.get("name"));
+                });
+                if (!unspecifiedPresent) {
+                    HashMap<String, Object> unspecifiedEnum = new HashMap<String, Object>();
+                    unspecifiedEnum.put("name", UNSPECIFIED);
+                    unspecifiedEnum.put("isString", "false");
+                    unspecifiedEnum.put("value", "\"" + UNSPECIFIED + "\"");
+                    enumVars.add(0, unspecifiedEnum);
+                }
             }
 
             if (allowableValues.containsKey("values")) {
                 List<String> values = (List<String>) allowableValues.get("values");
                 List<String> modifiableValues = new ArrayList<>(values);
-                modifiableValues.add(0, "UNSPECIFIED");
+                modifiableValues.add(0, UNSPECIFIED);
                 allowableValues.put("values", modifiableValues);
             }
         }
