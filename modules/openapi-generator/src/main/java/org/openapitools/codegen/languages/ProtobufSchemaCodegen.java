@@ -590,9 +590,11 @@ public class ProtobufSchemaCodegen extends DefaultCodegen implements CodegenConf
 
             if (allowableValues.containsKey("values")) {
                 List<String> values = (List<String>) allowableValues.get("values");
-                List<String> modifiableValues = new ArrayList<>(values);
-                modifiableValues.add(0, UNSPECIFIED);
-                allowableValues.put("values", modifiableValues);
+                if (!values.contains(UNSPECIFIED)) {
+                    List<String> modifiableValues = new ArrayList<>(values);
+                    modifiableValues.add(0, UNSPECIFIED);
+                    allowableValues.put("values", modifiableValues);
+                }
             }
         }
     }
